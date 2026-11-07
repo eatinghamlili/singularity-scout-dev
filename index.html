@@ -1317,12 +1317,14 @@ dialog::backdrop { background: rgb(10 4 24 / .62); }
     // our record and next match
     const ours = list.filter(m => has(m, us));
     let w = 0, l = 0, tie = 0;
-    for (const m of ours) if (m.played && m.redScore != null) { const red = m.red.some(t => t.n === us); const a = red ? m.redScore : m.blueScore, b = red ? m.blueScore : m.redScore; a > b ? w++ : a < b ? l++ : tie++; }
+    const surOf = (m) => [...m.red, ...m.blue].some(t => t.n === us && t.sur);
+    // surrogate matches don't count toward a team's record
+    for (const m of ours) if (m.played && m.redScore != null && !surOf(m)) { const red = m.red.some(t => t.n === us); const a = red ? m.redScore : m.blueScore, b = red ? m.blueScore : m.redScore; a > b ? w++ : a < b ? l++ : tie++; }
     const next = ours.find(m => !m.played);
     const sideTxt = (m) => { const red = m.red.some(t => t.n === us); const mine = (red ? m.red : m.blue).filter(t => t.n !== us).map(t => t.n), opp = (red ? m.blue : m.red).map(t => t.n);
       return `${red ? "Red" : "Blue"} with ${mine.join(" & ") || "no partner"} vs ${opp.join(", ")}`; };
     $("qualSum").innerHTML = ours.length
-      ? `<b>Team ${esc(us)}</b><span>${ours.length} match${ours.length === 1 ? "" : "es"} · ${w}-${l}-${tie} so far</span>${next ? `<span class="nextm">Next: <b>${label(next)}</b>${next.scheduled ? " at " + esc(fmtT(next.scheduled)) : ""} · ${esc(sideTxt(next))}</span>` : `<span class="nextm">All our matches are played.</span>`}`
+      ? `<b>Team ${esc(us)}</b><span>${ours.length} match${ours.length === 1 ? "" : "es"} · ${w}-${l}-${tie} so far${ours.some(surOf) ? ` (${ours.filter(surOf).length} surrogate match not counted)` : ""}</span>${next ? `<span class="nextm">Next: <b>${label(next)}</b>${next.scheduled ? " at " + esc(fmtT(next.scheduled)) : ""} · ${esc(sideTxt(next))}</span>` : `<span class="nextm">All our matches are played.</span>`}`
       : `<b>Team ${esc(us)}</b><span>${list.length ? "isn't in this competition's match schedule." : ""}</span>`;
     const q = view.q.trim();
     let shown = qualOurs && ours.length ? ours : list;
@@ -1338,7 +1340,7 @@ dialog::backdrop { background: rgb(10 4 24 / .62); }
       const win = done ? (m.redScore > m.blueScore ? "red" : m.blueScore > m.redScore ? "blue" : "tie") : "";
       const state = done ? "Played" : m === nextAll ? "Up next" : "Upcoming";
       return `<div class="match ${has(m, us) ? "ours" : ""} ${done ? "done" : ""}">
-        <div class="mhead"><b>${label(m)}</b><span class="mstate ${m === nextAll && !done ? "soon" : ""}">${state}</span><span class="mtime">${esc(fmtT(m.time))}</span></div>
+        <div class="mhead"><b>${label(m)}</b>${[...m.red, ...m.blue].some(t => t.sur) ? `<span class="mstate" title="* marks a surrogate: that match doesn't count toward their record">has surrogate*</span>` : ""}<span class="mstate ${m === nextAll && !done ? "soon" : ""}">${state}</span><span class="mtime">${esc(fmtT(m.time))}</span></div>
         <div class="alli red ${win === "red" ? "won" : ""}"><div class="mteams">${m.red.map(chip).join("")}</div><span class="mscore">${done ? m.redScore : "–"}</span></div>
         <div class="alli blue ${win === "blue" ? "won" : ""}"><div class="mteams">${m.blue.map(chip).join("")}</div><span class="mscore">${done ? m.blueScore : "–"}</span></div>
       </div>`;
